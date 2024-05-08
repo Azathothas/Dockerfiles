@@ -23,13 +23,15 @@
 > #-------------------------------------------------------#
 > ```
 ---
-- #### [ubuntu-systemd](https://hub.docker.com/r/azathothas/ubuntu-systemd-base)
-> - This is a base image [`ubuntu:latest`](https://hub.docker.com/_/ubuntu) meant for use by gh-runners with sysbox preconfigured on host
+- #### [x86_64-Ubuntu](https://github.com/Azathothas/Dockerfiles/blob/main/x86_64-ubuntu.dockerfile)
+> - This is a base image [`ubuntu:latest`](https://hub.docker.com/_/ubuntu) with some additional tweaks & addons
 > - **Preconfigured** : `Systemd + SSHD + Docker`
-> - **Runtime** : `sysbox-runc`
+> - **Runtime** : [`sysbox-runc`]((https://github.com/nestybox/sysbox))
+> - **Init** : [s6-overlay](https://github.com/just-containers/s6-overlay)
+> - **Docker Hub** : (https://hub.docker.com/r/azathothas/x86_64-ubuntu)
 > ```bash
 > docker run --runtime="sysbox-runc" -it --rm --name="ubuntu-systemd" "azathothas/ubuntu-systemd-base:latest"
 > !# Login
-> $USER="admin"
-> $PASSWORD="admin"
+> "${USER}"="runner"
+> "${PASSWORD}"="runneradmin"
 > ```
