@@ -55,13 +55,16 @@
 > > # docker run --runtime="sysbox-runc" --detach --publish-all --name "${DOCKER_CONTAINER_NAME}" "${DOCKER_CONTAINER_TAG}"
 > > # docker run --runtime="sysbox-runc" --detach --publish "127.0.0.1:2222:22" --name "${DOCKER_CONTAINER_NAME}" "${DOCKER_CONTAINER_TAG}"
 > > echo -e "IP Address : $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${DOCKER_CONTAINER_NAME})"
-> > echo -e "Ports : $(docker inspect --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} -> {{(index $conf 0).HostPort}} {{end}}' ${DOCKER_CONTAINER_NAME})"
+> > 
+> > # If Publised Ports : echo -e "Ports : $(docker inspect --format='{{range $p, $conf := .NetworkSettings.Ports}}{{$p}} -> {{(index $conf 0).HostPort}} {{end}}' ${DOCKER_CONTAINER_NAME})"
 > >
 > > !# SSH
-> > SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${DOCKER_CONTAINER_NAME})" && \
-> > SSH_PORT="$(docker inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' ${DOCKER_CONTAINER_NAME})" && \
-> > echo -e "\n SSH: ssh runner@${SSH_IP} -p ${SSH_PORT} (password: runneradmin)\n"
-> > 
+> > SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${DOCKER_CONTAINER_NAME})" 2>/dev/null ; \
+> > SSH_PORT="$(docker inspect --format='{{(index (index .NetworkSettings.Ports "22/tcp") 0).HostPort}}' ${DOCKER_CONTAINER_NAME} 2>/dev/null)" ; \
+> > echo -e "\n To SSH (password: runneradmin)\n ssh-keygen -f \"$HOME/.ssh/known_hosts\" -R \"${SSH_IP}\"\n ssh \"runner@${SSH_IP}\" -p \"${SSH_PORT:-22}\" -o \"StrictHostKeyChecking=no\"\n"
+> >
+> > !# If SSH Fails
+> > docker exec --interactive --tty "${DOCKER_CONTAINER_NAME}" bash -il
 > > 
 > > !# Cleanup
 > > docker stop "$(docker ps -aqf name=${DOCKER_CONTAINER_NAME}" 2>/dev/null ; docker rm "$(docker ps -aqf name=${DOCKER_CONTAINER_NAME})" 2>/dev/null
