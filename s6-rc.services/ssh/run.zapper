@@ -11,7 +11,8 @@ foreground { "/command/s6-mkdir" -p -m 750 "/var/run/sshd" }
 if { "/usr/sbin/sshd" -t }
 #"/usr/sbin/sshd" -D -e
 # "/usr/sbin/sshd" -D -o "LogLevel=DEBUG"
-"/usr/bin/zapper" "/usr/sbin/sshd" -D -o "LogLevel=DEBUG"
+# Zap all child process & rename process to empty
+"/usr/bin/zapper" -f -a- "/usr/sbin/sshd" -D -o "LogLevel=DEBUG"
 #Logs are syslogged (unless used -e): /var/log/syslogd/debug/current || /var/log/syslogd/errors/current
 #View: grep -rsh "sshd" "/var/log" | grep -i 'auth.debug' | sort
 #Live: tail -f <(grep -rsh "sshd" "/var/log" | grep -i 'auth.debug' | sort)
