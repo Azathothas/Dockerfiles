@@ -1,6 +1,7 @@
 #!/command/execlineb -P
 #Location: /etc/s6-overlay/s6-rc.d/tailscale/run
 #Requires: tailscale/tailscaled to be installed in /usr/bin/
+#Requires: /dev/net/tun ( cap_add: [net_admin, sys_module] || devices: [/dev/net/tun:/dev/net/tun])
   
 #Create config-dirs with constrained perms (rwx r-x ---) as foreground wait for completion
 foreground { "/command/s6-mkdir" -p -m 755 "/run/tailscale" }
