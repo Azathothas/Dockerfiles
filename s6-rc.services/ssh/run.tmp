@@ -1,9 +1,0 @@
-#Location: /etc/s6-overlay/s6-rc.d/ssh/run
-#!/command/execlineb -P
-# mkdir /var/run/sshd with constrained perms (rwx r-x ---) as foreground wait for completion 
-foreground { "/command/s6-mkdir" -p -m 750 "/var/run/sshd" }
-# catch stderr to stdout
-"/command/fdmove" -c 2 1
-# Verify sshd configurations & run in not-detached (no-daemon mode)
-if { "/usr/sbin/sshd" -t }
-"/usr/sbin/sshd" -D
