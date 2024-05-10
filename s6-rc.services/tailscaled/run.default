@@ -1,0 +1,13 @@
+#!/command/execlineb -P
+#Location: /etc/s6-overlay/s6-rc.d/tailscale/run
+#Requires: tailscale/tailscaled to be installed in /usr/bin/
+  
+#Create config-dirs with constrained perms (rwx r-x ---) as foreground wait for completion
+foreground { "/command/s6-mkdir" -p -m 755 "/run/tailscale" }
+foreground { "/command/s6-mkdir" -p -m 755 "/var/lib/tailscale" }
+
+#Redirect stderr to stdout
+"/command/fdmove" -c 2 1
+
+#Start Tailscaled [Port=0 --> Auto Select]
+"/usr/bin/tailscaled" --state="/var/lib/tailscale/tailscaled.state" --socket="/run/tailscale/tailscaled.sock" --socks5-server="localhost:9025" --outbound-http-proxy-listen="localhost:9025" --port="0" -no-logs-no-support
