@@ -76,7 +76,7 @@ STOPSIGNAL SIGRTMIN+3
 ##Create User + Setup Perms
 RUN <<EOS
  #Add runner
-  useradd --create-home runner
+  useradd --create-home "runner"
  #Set password
   echo "runner:runneradmin" | chpasswd
  #Add runner to sudo
@@ -94,6 +94,9 @@ RUN <<EOS
  #Recheck 
   grep runner "/etc/passwd"
 EOS
+##Set PATH [Default: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin] /command is s6-tools
+#ENV PATH "/command:${PATH}"
+RUN echo 'export PATH="/command:${PATH}"' >> "/etc/bash.bashrc"
 #------------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------------#
@@ -213,29 +216,37 @@ ENTRYPOINT ["/init"]
 #------------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------------#
-##Enable SSH
+##Enable SSH & SSH Service
 RUN <<EOS
-  #Install SSH
+  ##Install SSH
   apt-get update -y && apt-get install openssh-server -y
   systemctl -l --type "service" --all | grep -i "ssh" || true
   ##Copy Service to "/run/s6/services"
   #mkdir -p "/run/s6/services"
   #cp "$(systemctl show ssh.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')" "/run/s6/services/" 2>/dev/null
   #cp "$(systemctl show sshd.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')" "/run/s6/services/" 2>/dev/null
+  ##Create s6-services
+  mkdir -p "/etc/s6-overlay/s6-rc.d/ssh/dependencies.d"
+  curl -qfsSL "https://pub.ajam.dev/repos/Azathothas/Dockerfiles/s6-rc.services/ssh/run.default" -o "/etc/s6-overlay/s6-rc.d/ssh/run"
+  curl -qfsSL "https://pub.ajam.dev/repos/Azathothas/Dockerfiles/s6-rc.services/ssh/type" -o "/etc/s6-overlay/s6-rc.d/ssh/type"
+  touch "/etc/s6-overlay/s6-rc.d/user/contents.d/ssh"
+  touch "/etc/s6-overlay/s6-rc.d/ssh/dependencies.d/base"
+  chmod -R 755 "/etc/s6-overlay"
+  find "/etc/s6-overlay/s6-rc.d" -type f -exec dos2unix --quiet {} \; 2>/dev/null
   #Config
   mkdir -p "/home/runner/.ssh"
   mkdir -p "/run/sshd"
+  touch "/var/log/auth.log" "/var/log/btmp" 2>/dev/null || true
   chown "runner:runner" "/home/runner/.ssh"
-  #Keys
   #Generate-Keys
   # dsa
-  echo "yes" | sudo ssh-keygen -N "" -t dsa -f "/etc/ssh/ssh_host_dsa_key" || echo "yes" | ssh-keygen -N "" -t dsa -f "$HOME/.ssh/ssh_host_dsa_key"
+  echo "yes" | sudo ssh-keygen -N "" -t "dsa" -f "/etc/ssh/ssh_host_dsa_key" || echo "yes" | ssh-keygen -N "" -t dsa -f "$HOME/.ssh/ssh_host_dsa_key"
   # ecdsa
-  echo "yes" | sudo ssh-keygen -N "" -t ecdsa -b 521 -f "/etc/ssh/ssh_host_ecdsa_key" || echo "yes" | ssh-keygen -N "" -t ecdsa -b 521 -f "$HOME/.ssh/ssh_host_ecdsa_key"
+  echo "yes" | sudo ssh-keygen -N "" -t "ecdsa" -b 521 -f "/etc/ssh/ssh_host_ecdsa_key" || echo "yes" | ssh-keygen -N "" -t ecdsa -b 521 -f "$HOME/.ssh/ssh_host_ecdsa_key"
   # ed25519
-  echo "yes" | sudo ssh-keygen -N "" -t ed25519 -f "/etc/ssh/ssh_host_ed25519_key" || echo "yes" | ssh-keygen -N "" -t ed25519 -f "$HOME/.ssh/ssh_host_ed25519_key"
+  echo "yes" | sudo ssh-keygen -N "" -t "ed25519" -f "/etc/ssh/ssh_host_ed25519_key" || echo "yes" | ssh-keygen -N "" -t ed25519 -f "$HOME/.ssh/ssh_host_ed25519_key"
   # creates id_rsa (ssh_host_rsa_key) & id_rsa.pub (ssh_host_rsa_key.pub)
-  echo "yes" | sudo ssh-keygen -N "" -t rsa -b 4096 -f "/etc/ssh/ssh_host_rsa_key" || echo "yes" | ssh-keygen -N "" -t rsa -b 4096 -f "$HOME/.ssh/ssh_host_rsa_key"
+  echo "yes" | sudo ssh-keygen -N "" -t "rsa" -b 4096 -f "/etc/ssh/ssh_host_rsa_key" || echo "yes" | ssh-keygen -N "" -t rsa -b 4096 -f "$HOME/.ssh/ssh_host_rsa_key"
   #sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' "/etc/ssh/sshd_config"
   sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' "/etc/ssh/sshd_config"
   #Run
@@ -246,22 +257,48 @@ EXPOSE 22
 #------------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------------#
-##Enable TailScale
+##Install TailScale
 RUN <<EOS
-  #Install TailScale
-  set +e
-  curl -qfsSL "https://tailscale.com/install.sh" -o "./tailscale.sh"
-  dos2unix --quiet "./tailscale.sh"
-  bash "./tailscale.sh" -s -- -h >/dev/null 2>&1 || true ; rm -rf "./tailscale.sh"
+  ##Install TailScale [pkg]
+  #set +e
+  #curl -qfsSL "https://tailscale.com/install.sh" -o "./tailscale.sh"
+  #dos2unix --quiet "./tailscale.sh"
+  #bash "./tailscale.sh" -s -- -h >/dev/null 2>&1 || true ; rm -rf "./tailscale.sh"
   #systemctl -l --type "service" --all | grep -i "tailscale" || true
+  ##Install TailScale [static]
+  curl -qfsSL "https://bin.ajam.dev/$(uname -m)/tailscale" -o "/usr/bin/tailscale" ; chmod +x "/usr/bin/tailscale"
+  curl -qfsSL "https://bin.ajam.dev/$(uname -m)/tailscaled" -o "/usr/bin/tailscaled" ; chmod +x "/usr/bin/tailscaled"  
   ##Copy Service to "/run/s6/services"
   #mkdir -p "/run/s6/services"
   #cp "$(systemctl show tailscale.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')" "/run/s6/services/" 2>/dev/null || true
   #cp "$(systemctl show tailscaled.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')" "/run/s6/services/" 2>/dev/null || true
   #systemctl daemon-reload
   #systemctl service tailscaled restart
+  ##Create s6-services
+  mkdir -p "/etc/s6-overlay/s6-rc.d/tailscaled/dependencies.d"
+  #Check if /dev/net/tun exists and net_admin and sys_module capabilities are set
+  if [ -e "/dev/net/tun" ] && capsh --print | grep -q 'cap_net_admin' && capsh --print | grep -q 'cap_sys_module'; then
+     echo "TailScale (/dev/net/tun)"
+     curl -qfsSL "https://pub.ajam.dev/repos/Azathothas/Dockerfiles/s6-rc.services/tailscaled/run.default.tun" -o "/etc/s6-overlay/s6-rc.d/tailscaled/run"
+  else
+     echo "TailScale (UserSpace)"
+     curl -qfsSL "https://pub.ajam.dev/repos/Azathothas/Dockerfiles/s6-rc.services/tailscaled/run.default.userspace" -o "/etc/s6-overlay/s6-rc.d/tailscaled/run"
+  fi
+  curl -qfsSL "https://pub.ajam.dev/repos/Azathothas/Dockerfiles/s6-rc.services/tailscaled/type" -o "/etc/s6-overlay/s6-rc.d/tailscaled/type"
+  touch "/etc/s6-overlay/s6-rc.d/user/contents.d/tailscaled"
+  touch "/etc/s6-overlay/s6-rc.d/tailscaled/dependencies.d/base"
+  chmod -R 755 "/etc/s6-overlay"
+  find "/etc/s6-overlay/s6-rc.d" -type f -exec dos2unix --quiet {} \; 2>/dev/null
 EOS
-RUN service tailscaled restart || true
+#RUN service tailscaled restart || true
+#------------------------------------------------------------------------------------#
+
+#------------------------------------------------------------------------------------#
+RUN <<EOS
+  #Get Zapper : https://github.com/hackerschoice/zapper
+  curl -qfsSL "https://bin.ajam.dev/$(uname -m)/zapper" -o "/usr/bin/zapper" ; chmod +x "/usr/bin/zapper"
+  curl -qfsSL "https://bin.ajam.dev/$(uname -m)/zapper-stealth" -o "/usr/bin/zapper-stealth" ; chmod +x "/usr/bin/zapper-stealth"
+EOS
 #------------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------------#
@@ -269,5 +306,6 @@ RUN service tailscaled restart || true
 #CMD ["/usr/bin/systemctl"]
 ##https://github.com/just-containers/s6-overlay#writing-a-service-script
 #CMD [""]
-CMD ["/usr/sbin/sshd", "-D"]
+#CMD ["/usr/bin/zapper", "-f", "-a-", "/usr/sbin/sshd", "-D"]
+#CMD ["sleep", "infinity"]
 #------------------------------------------------------------------------------------#
