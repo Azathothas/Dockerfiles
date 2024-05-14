@@ -1,23 +1,34 @@
+##Official tailscaled.service [cat "$(systemctl show tailscale.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')"]
+## Location: /lib/systemd/system/tailscaled.service
+## Modded to support docker-systemctl : https://github.com/gdraheim/docker-systemctl-replacement
+## s6 version: https://github.com/Azathothas/Dockerfiles/blob/main/s6-rc.services/tailscaled/run.default.userspace
+## Debug:
+# sudo nano "/lib/systemd/system/tailscaled.service"
+# sudo systemctl daemon-reload
+# sudo systemctl status "tailscaled.service"
+# sudo systemctl stop "tailscaled.service"
+# sudo systemctl enable "tailscaled.service" --now
+# sudo systemctl restart "tailscaled.service"
+# sudo systemctl status "tailscaled.service"
+
 [Unit]
-Description=Tailscale node agent
-Documentation=https://tailscale.com/kb/
-Wants=network-pre.target
-After=network-pre.target NetworkManager.service systemd-resolved.service
+Description="Tailscale node agent"
+Documentation="https://tailscale.com/kb/"
 
 [Service]
+Type=notify
 EnvironmentFile=/etc/default/tailscaled
-ExecStart=/usr/bin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=${PORT} -no-logs-no-support $FLAGS
+ExecStartPre=/bin/mkdir -p -m 755 /run/tailscale /var/lib/tailscale
+ExecStart=/usr/bin/tailscaled --state='/var/lib/tailscale/tailscaled.state' --socket='/run/tailscale/tailscaled.sock' --socks5-server='localhost:9025' --outbound-http-proxy-listen='localhost:9025' --port='0' -no-logs-no-support
 ExecStopPost=/usr/bin/tailscaled --cleanup
-
-Restart=on-failure
-
+Restart=always
+RestartSec=2
 RuntimeDirectory=tailscale
 RuntimeDirectoryMode=0755
 StateDirectory=tailscale
 StateDirectoryMode=0700
 CacheDirectory=tailscale
 CacheDirectoryMode=0750
-Type=notify
 
 [Install]
 WantedBy=multi-user.target
