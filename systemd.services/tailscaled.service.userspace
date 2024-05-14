@@ -1,5 +1,7 @@
 ##Official tailscaled.service [cat "$(systemctl show tailscale.service -p FragmentPath 2>/dev/null | cut -d '=' -f 2 | tr -d '[:space:]')"]
 ## Location: /lib/systemd/system/tailscaled.service
+## Requires: tailscale/tailscaled to be installed in /usr/bin/
+## Requires: /dev/net/tun ( cap_add: [net_admin, sys_module] || devices: [/dev/net/tun:/dev/net/tun])
 ## Modded to support docker-systemctl : https://github.com/gdraheim/docker-systemctl-replacement
 ## s6 version: https://github.com/Azathothas/Dockerfiles/blob/main/s6-rc.services/tailscaled/run.default.userspace
 ## Debug:
